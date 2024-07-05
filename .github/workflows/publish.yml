@@ -1,0 +1,34 @@
+name: Publish Jupyter Notebooks via GitHub Pages
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install nbconvert
+        run: pip install nbconvert
+
+      - name: Convert all Jupyter notebooks into HTML files
+        run: PYTHONPATH=${PYTHONPATH}:${GITHUB_WORKSPACE}/src find . -name '*.ipynb' -type f -execdir jupyter nbconvert --template classic --to html --output-dir . --TagRemovePreprocessor.remove_input_tags hide-input --Exporter.preprocessors utils.nbconvert.HtmlPuzzlePathPreprocessor {} \; -execdir rm {} \;
+
+      - name: Push notebooks folder to the pages branch
+        uses: s0/git-publish-subdir-action@develop
+        env:
+          REPO: self
+          FOLDER: notebooks
+          BRANCH: pages
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MESSAGE: "Publish Jupyter Notebooks from commit {sha}"
+          SQUASH_HISTORY: true
